@@ -1,0 +1,26 @@
+{
+    "id": "63060315",
+    "path": "C:/Users/gsaldutti/OneDrive - Detroit Land Bank Authority/gis/projects/apps/shiny/scattered-site-bundles/cleaning-scripts/tt.R",
+    "project_path": "cleaning-scripts/tt.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1675798869579.0,
+    "source_on_save": false,
+    "relative_order": 3,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "146,0",
+        "scrollLine": "128"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1675800405,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1675800405331,
+    "read_only": false,
+    "read_only_alternatives": []
+}

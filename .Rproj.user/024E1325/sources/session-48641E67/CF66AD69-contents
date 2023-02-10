@@ -1,0 +1,14 @@
+name: scattered-site-bundles
+title: scattered-site-bundles
+username:
+account: gsalduttidlba
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 8193798
+bundleId: 6820920
+url: https://gsalduttidlba.shinyapps.io/scattered-site-bundles/
+when: 1675804205.51499
+lastSyncTime: 1675804205.515
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: cleaning-scripts/tt.R|data/parcels.RDS|data/sf_attempts-to-sell-0.csv|data/sf_attempts-to-sell-1.csv|data/sf_main-structuress.csv|data/sf_prop-inqs.csv|R/sfimport.R
