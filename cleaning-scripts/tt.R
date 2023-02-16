@@ -92,6 +92,8 @@ sf_main <- sf_main %>% st_as_sf() %>% st_transform(2898) %>% st_centroid() #tran
 sf_sites <- sf_list[[2]]
 sf_sites <- sf_sites %>% st_as_sf() %>% st_transform(2898) %>% st_centroid()
 
+#remove duplicate sites from those in main
+sf_sites <-  sf_sites %>% filter(!sf_sites$ParcelID_structure %in% sf_main$ParcelID_structure)
 
 #### Spatial Operations ####
 nearest_feature <- st_nearest_feature(sf_sites, sf_main) #get nearest feature for each site
