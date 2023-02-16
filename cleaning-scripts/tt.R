@@ -57,11 +57,11 @@ get_cols <- function(x, geo_p) {
   colnames(x) <- y[-2]
   
   #rename parcel id cols
-  colnames(x)[1] <- "ParcelID_structure" #rename parcel id col for joining
+  colnames(x)[1] <- "ParcelID" #rename parcel id col for joining
   x$index <- 1:nrow(x) #create index row for rejoining data 
   
   #join data to parcel for geoms
-  x<- merge(x, geo_p[,'parcel_number'], by.x="ParcelID_structure", by.y="parcel_number")
+  x<- merge(x, geo_p[,'parcel_number'], by.x="ParcelID", by.y="parcel_number")
   x <- st_as_sf(x) %>% st_transform(2898)#transform crs
   
 } 
@@ -93,7 +93,7 @@ sf_sites <- sf_list[[2]]
 sf_sites <- sf_sites %>% st_as_sf() %>% st_transform(2898) %>% st_centroid()
 
 #remove duplicate sites from those in main
-sf_sites <-  sf_sites %>% filter(!sf_sites$ParcelID_structure %in% sf_main$ParcelID_structure)
+sf_sites <-  sf_sites %>% filter(!sf_sites$ParcelID %in% sf_main$ParcelID)
 
 #### Spatial Operations ####
 nearest_feature <- st_nearest_feature(sf_sites, sf_main) #get nearest feature for each site
@@ -117,10 +117,12 @@ sf_main$index <- 1:nrow(sf_main)
 
 #join dfs by index 
 sf_df <- sf_df %>% 
-  rename(ParcelID=ParcelID_structure) %>%
-  left_join(st_drop_geometry(sf_main[,c("index","ParcelID_structure")]), 
-                             by = c("nearest_feature"='index')) %>%
-  rename(ParcelID_site=ParcelID)
+  rename(ParcelID_site = "ParcelID") %>%
+  left_join(st_drop_geometry(sf_main[,c("index","ParcelID")]), 
+                             by = c("nearest_feature"='index')) 
+
+sf_df <- rename(sf_df, ParcelID_structure = "ParcelID")
+
 
 
 #set up quantiles for adding quant col 
@@ -150,12 +152,12 @@ sf_df <- sf_df %>%
 
 
 sf_df <- st_drop_geometry(sf_df)
-sf_df <- sf_df %>% left_join(geo_p[,"parcel_number"], by = c("ParcelID_structure"="parcel_number"))
+sf_df <- sf_df %>% left_join(geo_p[,"parcel_number"], by = c("ParcelID_site"="parcel_number"))
 
 sf_df <- sf_df %>% st_as_sf()
 
 sf_main <- st_drop_geometry(sf_main)
-sf_main <- sf_main %>% rename(ParcelID = ParcelID_structure) %>%
+sf_main <- sf_main %>%
   left_join(geo_p[,"parcel_number"], by=c("ParcelID"="parcel_number"))
 
 sf_main <- sf_main %>% st_as_sf()

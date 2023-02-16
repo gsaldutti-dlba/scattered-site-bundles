@@ -13,14 +13,14 @@ vars<- c("Parcel ID"="ParcelID")
 
 main_url = "https://github.com/gsaldutti-dlba/scattered-site-bundles/blob/main/appData/main.RDS?raw=true"
 main <- readRDS(gzcon(url(main_url))) %>%
-  #main <- readRDS(here::here('appData/main.RDS')) %>% 
+  #main <- readRDS(here::here('appData/main.RDS')) %>%
   st_transform(4326) %>%
   st_cast("POLYGON")
 
 #read in potential site data
 sites_url <- "https://github.com/gsaldutti-dlba/scattered-site-bundles/blob/main/appData/sites.RDS?raw=true"
 sites <- readRDS(gzcon(url(sites_url))) %>%
-  #sites <- readRDS(here::here('appData/sites.RDS')) %>%  
+  #sites <- readRDS(here::here('appData/sites.RDS')) %>%
   st_transform(4326) %>%
   st_cast("POLYGON") 
 
@@ -208,7 +208,7 @@ server <- function(input, output, session) { #create plotly server setup
         ,popup=
           paste0(
               "<strong>Address: </strong>", filter_sites$Address, "</br>",
-            "<strong>ParcelID: </strong>", filter_sites$ParcelID_structure,"</br>",
+            "<strong>ParcelID: </strong>", filter_sites$ParcelID_site,"</br>",
             "<strong>Neighborhood: </strong>", filter_sites$Neighborhood ,"</br>",
             #"<strong>Zip: </strong>", filter_sites$PropertyZIPCode ,"</br>",
             "<strong>District: </strong>", filter_sites$CouncilDistrict ,"</br>",
@@ -231,6 +231,8 @@ server <- function(input, output, session) { #create plotly server setup
     
     } else { #if default view is selected 
       
+      s <- sites[sites$nearest_dist <= input$distInput,]
+      print(s)
       #this recreates the default load map
       leafletProxy({"siteMap"}) %>% #update map
         #clear all
@@ -241,24 +243,36 @@ server <- function(input, output, session) { #create plotly server setup
                      weight=2,
                      color="purple",
                      group="Districts") %>%
+        #add non-reactive main data
+        addPolygons(data=main
+                    ,color='green'
+                    ,weight=3
+                    , group="400"
+                    ,opacity=.7
+                    ,popup=
+                      paste0(
+                        "<strong>Case Number: </strong>", main$CaseCaseNumber, "</br>",
+                        "<strong>Address: </strong>", main$CaseAddress, "</br>",
+                        "<strong>Parcel ID: </strong>", main$ParcelID, "</br>")) %>%
+        addLegend("bottomright", colors="green" ,labels = "Main Structure") %>%
         
         #add non-reactive site data
-        addPolygons(data=sites[sites$nearest_dist <= input$distInput,]
-                    ,opacity  = .4
-                    ,fillOpacity = .4
+        addPolygons(data=s
+                    ,opacity  = .8
+                    ,fillOpacity = .8
                     ,color=~pal(nearest_dist)
-                    ,weight=2
+                    ,weight=4
                     ,group="410"
                     ,popup=paste0(
                     #"<strong>Case Number: </strong>", sites$CaseNumber, "</br>",
-                    "<strong>Address: </strong>", sites$Address, "</br>",
-                    "<strong>ParcelID: </strong>", sites$PropertyParcelID_structure,"</br>",
-                    "<strong>Neighborhood: </strong>", sites$Neighborhood ,"</br>",
+                    "<strong>Address: </strong>", s$Address, "</br>",
+                    "<strong>ParcelID: </strong>", s$ParcelID_site,"</br>",
+                    "<strong>Neighborhood: </strong>", s$Neighborhood ,"</br>",
                     #"<strong>Zip: </strong>", sites$PropertyZIPCode ,"</br>",
-                    "<strong>District: </strong>", sites$CouncilDistrict ,"</br>",
-                    "<strong>Property Class: </strong>", sites$PropertyClass,"</br>",
-                    "<strong>Distance to Nearest: </strong>", as.integer(sites$nearest_dist), "ft", "</br>",
-                    "<strong>Nearest Parcel: </strong>", sites$ParcelID_site)
+                    "<strong>District: </strong>", s$CouncilDistrict ,"</br>",
+                    "<strong>Property Class: </strong>", s$PropertyClass,"</br>",
+                    "<strong>Distance to Nearest: </strong>", as.integer(s$nearest_dist), "ft", "</br>",
+                    "<strong>Nearest Parcel: </strong>", s$ParcelID_structure)
                     ) %>%
         
         #add legend with nearest neighbor coding
@@ -267,20 +281,7 @@ server <- function(input, output, session) { #create plotly server setup
                              Nearest structure (ft)"),
                   labFormat = labelFormat(suffix = "ft"),
                   opacity = 1, data=sites
-                  )  %>%
-        
-        #add non-reactive main data
-        addPolygons(data=main
-                    ,color='green'
-                    ,weight=4
-                    , group="400"
-                    ,opacity=.8
-                    ,popup=
-                      paste0(
-                        "<strong>Case Number: </strong>", main$CaseCaseNumber, "</br>",
-                        "<strong>Address: </strong>", main$CaseAddress, "</br>",
-                        "<strong>Parcel ID: </strong>", main$ParcelID, "</br>")) %>%
-        addLegend("bottomright", colors="green" ,labels = "Main Structure")
+                  ) 
     } #end else statement
     }) #end observe container
   
