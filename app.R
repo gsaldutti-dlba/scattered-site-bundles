@@ -4,17 +4,21 @@ library(units)
 library(leaflet)
 library(leafpop)
 library(dplyr)
+library(curl)
 
 ##########Load Data############
 
 vars<- c("Parcel ID"="ParcelID")
 #read in main structure data
-main <- readRDS(here::here('appData/main.RDS')) %>%
+
+main_url = "https://github.com/gsaldutti-dlba/scattered-site-bundles/blob/main/appData/main.RDS?raw=true"
+main <- readRDS(gzcon(url(main_url))) %>%
   st_transform(4326) %>%
   st_cast("POLYGON")
 
 #read in potential site data
-sites <- readRDS(here::here('appData/sites.RDS')) %>%
+sites_url <- "https://github.com/gsaldutti-dlba/scattered-site-bundles/blob/main/appData/sites.RDS?raw=true"
+sites <- readRDS(gzcon(url(sites_url))) %>%
   st_transform(4326) %>%
   st_cast("POLYGON") 
 
@@ -22,16 +26,19 @@ sites <- readRDS(here::here('appData/sites.RDS')) %>%
 sites$nearest_dist <- as.numeric(sites$nearest_dist)
 
 #read in distance matrix
-mat_distances <- readRDS(here::here('appData/distance-matrix.RDS'))
+matrix_url<-"https://github.com/gsaldutti-dlba/scattered-site-bundles/blob/main/appData/distance-matrix.RDS?raw=true"
+mat_distances <- readRDS(gzcon(url(matrix_url)))
 
 #set color palette
 dist_palette <- "magma"
 
 districts <- readRDS(here::here('appData/districts.RDS')) %>% st_cast("POLYGON") %>%st_cast("LINESTRING")
+#lra_url <- "https://github.com/gsaldutti-dlba/scattered-site-bundles/blob/main/appData/LRA.RDS?raw=true"
 
-lra<- readRDS(here::here('appData/LRA.RDS')) %>% st_transform(4326)
-#create ui
-#
+
+lra <- readRDS(here::here('appData/LRA.RDS')) %>% st_transform(4326) %>% st_cast("POLYGON") %>%st_cast("LINESTRING")
+
+#### ui ####
 ui <- fluidPage(#create fluid page
   
   div(class='outer', #create div within page for defining css style
@@ -64,6 +71,7 @@ ui <- fluidPage(#create fluid page
   )#end div
   ) #end fluid page external
 
+#### server ####
 server <- function(input, output, session) { #create plotly server setup
   
   

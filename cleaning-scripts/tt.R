@@ -5,27 +5,33 @@ source(here::here('R/sfimport.R'))
 
 ####Read data####
 geo_p <- readRDS(here::here('data/parcels.RDS')) #parcels
-sf_main <- sfimport(here::here('data/sf_main-structuress.csv')) #main structures
+sf_main <- sfimport(here::here('data/main.csv')) #main structures
+sf_sites <- sfimport(here::here('data/sites.csv'))
 
 #properties with > 1 attempts to sell
-sf_attempts_1 <- sfimport(here::here('data/sf_attempts-to-sell-1.csv'))
+#sf_attempts_1 <- sfimport(here::here('data/sf_attempts-to-sell-1.csv'))
 #properties with 0 attempts
-sf_attempts_0 <- sfimport(here::here('data/sf_attempts-to-sell-0.csv'))
+#sf_attempts_0 <- sfimport(here::here('data/sf_attempts-to-sell-0.csv'))
 #properties with 0 inqs
-sf_inqueries <- sfimport(here::here('data/sf_prop-inqs.csv'))
-#grop and create inqury count column for inquery df
-sf_inqueries <- sf_inqueries %>% 
-  group_by(RelatedPropertyParcelID) %>%
-  mutate(total_inqueries= n()) %>%
-  ungroup() %>%
-  distinct(RelatedPropertyParcelID, .keep_all=T)
+#sf_inqueries <- sfimport(here::here('data/sf_prop-inqs.csv'))
 
-#### Clean SF data ####
-
+# #grop and create inqury count column for inquery df
+# sf_inqueries <- sf_inqueries %>% 
+#   group_by(RelatedPropertyParcelID) %>%
+#   mutate(total_inqueries= n()) %>%
+#   ungroup() %>%
+#   distinct(RelatedPropertyParcelID, .keep_all=T)
+# 
+# #### Clean SF data ####
+# 
+sf_main$Neighborhood <- NA
+sf_main$District <- NA
+sf_sites$District <- NA
 #create list of site dfs
-sf_list <- list(sf_attempts_0, sf_attempts_1, sf_inqueries)
+sf_list <- list(sf_main, sf_sites)
 
-names(sf_list) <- c("sf_attempts_0","sf_attempts_1", "sf_inqueries")
+
+names(sf_list) <- c("sf_main","sf_sites")
 
 #function for selecting cols and joining parcel geoms 
 get_cols <- function(x, geo_p) {
@@ -60,35 +66,46 @@ get_cols <- function(x, geo_p) {
   
 } 
 #apply function to return list of dfs
-sf_list <- lapply(sf_list, get_cols,geo_p) #return list of dfs with parcel geoms
+sf_list <- lapply(sf_list, get_cols, geo_p) #return list of dfs with parcel geoms
 
 
 ###create single df for sites
 
 #bind rows from list of dfs 
-sf_df <- bind_rows(sf_list, .id = "column_label")
+#sf_df <- bind_rows(sf_list, .id = "column_label")
 
+
+# sf_sites <- sf_sites[,grepl("ParcelID|AccountN|Address|Program|District|Neighborhood|PropertyClass", 
+#                           colnames(sf_sites))]
+# 
+# 
+# sf_main <- sf_main[,grepl("ParcelID|AccountN|Address|Program|District|Neighborhood|PropertyClass", 
+#                    colnames(sf_main))]
 
 ### join main structures parcel geoms and transform
-sf_main <- sf_main %>% left_join(geo_p, by =c("ParcelID"="parcel_number"))
+sf_main <- sf_list[[1]]
+#sf_main <- sf_main %>% left_join(geo_p, by =c("ParcelID"="parcel_number"))
 sf_main <- sf_main %>% st_as_sf() %>% st_transform(2898) %>% st_centroid() #transform
 
 
+#sf_sites <- sf_sites %>% left_join(geo_p, by = c('PropertyParcelID'='parcel_number'))
+sf_sites <- sf_list[[2]]
+sf_sites <- sf_sites %>% st_as_sf() %>% st_transform(2898) %>% st_centroid()
 
 
 #### Spatial Operations ####
-nearest_feature <- st_nearest_feature(sf_df, sf_main) #get nearest feature for each site
+nearest_feature <- st_nearest_feature(sf_sites, sf_main) #get nearest feature for each site
 
 #get distance of all sites to structures
 #creates matrix for filtering within app
-dist2 <- st_distance(sf_df, sf_main) 
+dist2 <- st_distance(sf_sites, sf_main) 
 dist2 <- as.matrix(dist2)
 
 #get distance to nearest feature for each site in relation to main structure
-nearest_dist <- st_distance(sf_df, sf_main[nearest_feature,],by_element=T)
+nearest_dist <- st_distance(sf_sites, sf_main[nearest_feature,],by_element=T)
 
 #bind distance to nearest feature to dataframe
-sf_df <- cbind(sf_df, nearest_dist)
+sf_df <- cbind(sf_sites, nearest_dist)
 
 #get index of nearest feature for each site
 sf_df <- cbind(sf_df, nearest_feature)
@@ -98,35 +115,36 @@ sf_main$index <- 1:nrow(sf_main)
 
 #join dfs by index 
 sf_df <- sf_df %>% 
-  left_join(st_drop_geometry(sf_main[,c("index","ParcelID")]), 
+  rename(ParcelID=ParcelID_structure) %>%
+  left_join(st_drop_geometry(sf_main[,c("index","ParcelID_structure")]), 
                              by = c("nearest_feature"='index')) %>%
   rename(ParcelID_site=ParcelID)
 
 
 #set up quantiles for adding quant col 
-classes <- 5
-quantiles <- sf_df %>%
-  pull(nearest_dist) %>%
-  quantile() %>%
-  as.vector()
+# classes <- 5
+# quantiles <- sf_df %>%
+#   pull(nearest_dist) %>%
+#   quantile() %>%
+#   as.vector()
   
 
 # here create custom labels
-labels <- purrr::imap_chr(quantiles, function(., idx){
-  return(paste0(round(quantiles[idx], 0),
-                "ft",
-                " – ",
-                round(quantiles[idx + 1], 0),
-         "ft"))
-})
+# labels <- purrr::imap_chr(quantiles, function(., idx){
+#   return(paste0(round(quantiles[idx], 0),
+#                 "ft",
+#                 " – ",
+#                 round(quantiles[idx + 1], 0),
+#          "ft"))
+# })
+# 
+# labels <- labels[1:length(labels) - 1]
 
-labels <- labels[1:length(labels) - 1]
 
-
-sf_df <- sf_df %>%  mutate(quantiles = cut(nearest_dist,
-                              breaks = quantiles,
-                              labels = labels,
-                              include.lowest = T))
+# sf_df <- sf_df %>%  mutate(quantiles = cut(nearest_dist,
+#                               breaks = quantiles,
+#                               labels = labels,
+#                               include.lowest = T))
 
 
 sf_df <- st_drop_geometry(sf_df)
@@ -135,7 +153,8 @@ sf_df <- sf_df %>% left_join(geo_p[,"parcel_number"], by = c("ParcelID_structure
 sf_df <- sf_df %>% st_as_sf()
 
 sf_main <- st_drop_geometry(sf_main)
-sf_main <- sf_main %>% left_join(geo_p[,"parcel_number"], by=c("ParcelID"="parcel_number"))
+sf_main <- sf_main %>% rename(ParcelID = ParcelID_structure) %>%
+  left_join(geo_p[,"parcel_number"], by=c("ParcelID"="parcel_number"))
 
 sf_main <- sf_main %>% st_as_sf()
 
